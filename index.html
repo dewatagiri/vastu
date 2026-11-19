@@ -99,8 +99,12 @@ a.btn{text-decoration:none}a.btn:not(.soft):not(.ghost){color:var(--brand-ink)}
 .chipb.on{background:var(--brand,#0e7c86);border-color:var(--brand,#0e7c86);color:#fff}
 .chipb[hidden],.ppg[hidden]{display:none}
 #ppl{max-height:48vh;overflow:auto}
+
+#bk{position:fixed;left:0;right:0;bottom:calc(3.9rem + env(safe-area-inset-bottom));z-index:6;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;justify-content:center;background:#fff8e1;border-top:1px solid #f0d98a;border-bottom:1px solid #f0d98a;padding:.55rem .8rem;font-size:.88rem;color:#4a3b00}
+#bk[hidden]{display:none}#bk .btn{min-height:40px;padding:.3rem .8rem}
+body{padding-bottom:7.5rem}
 </style></head><body>
-<div id="app"><p style="padding:1.5rem;font-family:sans-serif">Loading LifePath. If nothing appears or buttons do nothing, open this file in Chrome or Safari, not in a preview.</p></div><nav class="nav" id="nav" aria-label="Main"></nav>
+<div id="app"><p style="padding:1.5rem;font-family:sans-serif">Loading LifePath. If nothing appears or buttons do nothing, open this file in Chrome or Safari, not in a preview.</p></div><nav class="nav" id="nav" aria-label="Main"></nav><div id="bk" hidden role="status"></div>
 <datalist id="cities"></datalist>
 <div id="modal" role="dialog" aria-modal="true"><div class="sheet"></div></div><div id="toast" role="status"></div>
 <noscript>LifePath needs JavaScript to run.</noscript>
@@ -448,10 +452,14 @@ function profToState(pr){return{dob:pr.dob,tmode:pr.tmode||'unknown',time:pr.tim
 const ROUTES={home:vHome,cal:vCal,hor:vHor,mar:vMar,house:vHouse,trip:vTrip,biz:vBiz,veh:vVeh,job:vJob,baby:vBaby,vastu:vVastu,num:vNum,saved:vSaved,profiles:vProfiles,settings:vSettings,privacy:vPrivacy,support:vSupport};
 let curRoute='home';
 function route(){const h=(location.hash||'#/home').replace('#/','');return ROUTES[h]?h:'home'}
+function bkBar(){const el=$('#bk');if(!el)return;const now=Date.now(),has=S.profiles.length||S.saved.length||S.places.length,last=S.settings.lastBackup||0,due=!last||now-last>14*864e5,snz=(S.settings.bkSnooze||0)>now;
+ if(!has||!due||snz||route()==='privacy'){el.hidden=true;return}
+ const d=last?Math.floor((now-last)/864e5)+' days ago':'never';
+ el.innerHTML='<span>Your profiles and saved readings live only on this phone. Last backup: '+d+'.</span><button class="btn sm" data-act="export">Back up now</button><button class="btn soft sm" data-act="bklater">Later</button>';el.hidden=false}
 function render(keepScroll){
  const r=route();const sy=window.scrollY;
  $('#app').innerHTML=ROUTES[r]()+foot();
- renderNav(r);
+ renderNav(r);bkBar();
  if(r!==curRoute){window.scrollTo(0,0);curRoute=r}else if(keepScroll!==false)window.scrollTo(0,sy);
  if(MODAL&&$('#modal').classList.contains('open'))$('#modal .sheet').innerHTML=MODAL()}
 function renderNav(r){const items=[['home','\u{1F3E0}','Home']];if(S.saved.length)items.push(['saved','\u{1F516}','Saved']);if(S.profiles.length)items.push(['profiles','\u{1F464}','Profiles']);items.push(['settings','⚙️','Settings']);
@@ -715,7 +723,7 @@ function vSettings(){const s=S.settings;
  '<div class="card"><button class="btn block soft" data-act="share" style="margin-bottom:.6rem">\u{1F4E4} Share this app</button><button class="btn block soft" data-act="install">\u{1F4F2} Add to home screen</button><button class="btn block soft" style="margin-top:.6rem" data-go="privacy">\u{1F512} Privacy and your data</button></div>'}
 /* ----- Privacy ----- */
 function vPrivacy(){return top('Privacy',1)+'<h1>Privacy and your data</h1><div class="card"><p><b>Everything stays on this device.</b> No account, no sign-up, no cloud. Your profiles and saved readings live in your browser’s storage and are never sent to us.</p><p>Calculations happen on your phone. The app makes no requests to any server for your data.</p><p class="small muted">Voice input uses your browser’s speech service. On some browsers (such as Chrome) the audio is processed by the browser vendor. If you prefer, type instead.</p><p class="small muted">Because we do not collect or hold your personal data, nothing needs to be transferred, shared or deleted on our side. This is meant to fit the spirit of Malaysia’s PDPA 2010 and Indonesia’s UU PDP (Law No. 27 of 2022). If you share an exported file, you are then responsible for who has it.</p></div>'+
- '<div class="card"><h3 style="margin-top:0">Your data</h3><p class="muted small">'+S.profiles.length+' profile(s), '+S.saved.length+' saved reading(s).</p><button class="btn block" data-act="export">⬇️ Export data</button><label class="btn block soft" style="margin-top:.6rem;cursor:pointer">⬆️ Import data<input type="file" accept="application/json,.json" data-act="import" hidden></label><button class="btn block danger" style="margin-top:.6rem" data-act="wipe">Delete all my data</button><p class="hint">Browsers can clear storage. Export a copy now and then.</p></div>'}
+ '<div class="card"><h3 style="margin-top:0">Your data</h3><p class="muted small">'+S.profiles.length+' profile(s), '+S.saved.length+' saved reading(s). Last backup: '+(S.settings.lastBackup?new Date(S.settings.lastBackup).toLocaleDateString():'never')+'.</p><button class="btn block" data-act="export">⬇️ Export data</button><label class="btn block soft" style="margin-top:.6rem;cursor:pointer">⬆️ Import data<input type="file" accept="application/json,.json" data-act="import" hidden></label><button class="btn block danger" style="margin-top:.6rem" data-act="wipe">Delete all my data</button><p class="hint">Browsers can clear storage. Export a copy now and then.</p></div>'}
 function vSupport(){return top('Support',1)+'<h1>Support this free app</h1><p class="muted">It is free to use. If it helped you, a small thank-you is always appreciated.</p><div class="row" style="justify-content:center;margin:1rem 0"><figure style="margin:0;text-align:center;width:11rem"><img src="'+QR_MY+'" alt="Malaysia National QR" style="width:100%;border:1px solid var(--line);border-radius:1rem;background:#fff;padding:.4rem"><figcaption class="small" style="margin-top:.4rem"><b>Malaysia:</b> scan with any banking app or e-wallet</figcaption></figure><figure style="margin:0;text-align:center;width:11rem"><img src="'+QR_WISE+'" alt="Wise QR" style="width:100%;border:1px solid var(--line);border-radius:1rem;background:#fff;padding:.4rem"><figcaption class="small" style="margin-top:.4rem"><b>International:</b> scan or tap to give via Wise</figcaption></figure></div><a class="btn block" href="https://wise.com/pay/me/mohamedm3529" target="_blank" rel="noopener noreferrer">Give via Wise</a><p class="hint center" style="margin-top:1rem">Completely optional. The app stays free either way. Your banking app will show the payee name when you scan.</p>'}
 const DISC='<h2 style="margin-top:0">Disclaimer</h2><p>LifePath is for guidance and reflection only. It is not medical, legal, financial or professional advice, and it does not predict or guarantee outcomes.</p><p>Astrology, Panchang, Vastu and numerology are traditional systems and traditions differ between communities. Dates and positions are computed to good approximations. Important ceremonies are best confirmed with your family priest or a qualified panchangkar.</p><p>You make your own decisions. Use these readings as one input among many.</p>';
 const TERMS='<h2 style="margin-top:0">Terms</h2><p>You may use LifePath for personal use free of charge. It is provided as is, without warranties. We are not liable for decisions made using it.</p><p>Your data stays on your device. Clearing your browser’s storage removes it, so export a copy if it matters to you.</p>';
@@ -776,7 +784,8 @@ const A={
  setting(el){const p=el.dataset.p;S.settings[p]=el.dataset.v;persist();applyTheme();render()},
  modal(el){const m=el.dataset.m;openModal(()=>(m==='terms'?TERMS:DISC)+'<button class="btn soft block" data-act="close" style="margin-top:.8rem">Close</button>')},
  close(){closeModal()},
- export(){const b=new Blob([JSON.stringify({app:'LifePath',version:1,exported:new Date().toISOString(),data:S},null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='lifepath-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast('Backup downloaded.')},
+ export(){const b=new Blob([JSON.stringify({app:'LifePath',version:1,exported:new Date().toISOString(),data:S},null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='lifepath-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);S.settings.lastBackup=Date.now();persist();bkBar();toast('Backup downloaded. Keep the file in Google Drive or WhatsApp it to yourself.')},
+ bklater(){S.settings.bkSnooze=Date.now()+7*864e5;persist();bkBar()},
  wipe(){if(confirm('Delete all profiles, saved readings and settings from this device? This cannot be undone.')){S=DEF();try{localStorage.removeItem(KEY)}catch(e){}applyTheme();render();toast('All data deleted.')}},
  install(){if(DEFER){DEFER.prompt();DEFER=null}else openModal(()=>'<h2 style="margin-top:0">Add to home screen</h2><p><b>iPhone (Safari):</b> tap the Share button, then <b>Add to Home Screen</b>.</p><p><b>Android (Chrome):</b> tap the ⋮ menu, then <b>Add to Home screen</b> or <b>Install app</b>.</p><p class="muted small">Open this file from a web address (not straight from your downloads) for the option to appear.</p><button class="btn soft block" data-act="close">Close</button>')},
  voice(){voiceFlow()},
